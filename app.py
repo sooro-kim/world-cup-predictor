@@ -465,24 +465,20 @@ if page == "Home":
     col_l, col_r = st.columns([3, 2])
 
     with col_l:
-        st.markdown('<div class="section-label">Methodology</div>', unsafe_allow_html=True)
         st.markdown("""
-**XGBoost classifier** trained on 256 World Cup matches from 2010 to 2022.
-Walk-forward validation — each tournament predicted using only prior data.
-
-**Features**
-
-Each team's rolling statistics over the 12 months before the match:
-
-- **Quality-adjusted form** — win rate weighted by opponent FIFA ranking. A win against Brazil carries more signal than a win against a lower-ranked side. Friendly matches receive 0.5x weight.
-- **Attack / defense metrics** — average goals scored and conceded per match
-- **Head-to-head record** — historical win rate between the two specific teams
-- **FIFA ranking differential** — pre-match ranking gap
-
-**Validation results**
-
-The model outperformed the naive baseline (always predict the most common outcome) in all three test tournaments: 2014, 2018, and 2022. Overall accuracy: 54.7% versus 42.7% baseline on a 3-class problem.
-        """)
+<div style="margin-bottom:40px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#52527a;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:32px;">
+        2026 · FIFA World Cup · North America
+    </div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:3.8rem;font-weight:700;line-height:0.95;letter-spacing:-0.03em;color:#ffffff;margin-bottom:24px;">
+        Who<br>wins<br><span style="color:#4f9fff;">tonight.</span>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#52527a;letter-spacing:0.06em;line-height:2;border-left:1px solid #1c1c30;padding-left:16px;margin-top:28px;">
+        XGBoost · Walk-forward validation<br>
+        48 teams · 104 matches · June 11 – July 19
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
     with col_r:
         st.markdown('<div class="section-label">2026 Groups</div>', unsafe_allow_html=True)
