@@ -45,40 +45,7 @@ html, body, [class*="css"] {
 section[data-testid="stSidebar"] { display: none !important; }
 button[data-testid="collapsedControl"] { display: none !important; }
 
-/* Top nav bar */
-.topnav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 0 20px 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 32px;
-}
-.topnav-brand {
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: #ffffff;
-}
-.topnav-links {
-    display: flex;
-    gap: 32px;
-    align-items: center;
-}
-.topnav-link {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    padding-bottom: 2px;
-}
-.topnav-link.active {
-    color: #ffffff;
-    border-bottom: 1px solid var(--accent);
-}
+
 
 /* Remove default padding */
 .block-container { padding: 2rem 2.5rem !important; max-width: 1400px !important; }
@@ -306,19 +273,25 @@ header    { visibility: hidden; }
 button[data-testid="collapsedControl"] { display: none !important; }
 section[data-testid="stSidebar"] > div:first-child { padding-top: 2rem !important; }
 
-/* Nav buttons in topnav — invisible, full width overlay */
+/* Nav buttons */
 .stButton > button {
     background: transparent !important;
-    border: none !important;
-    color: transparent !important;
-    font-size: 1px !important;
-    padding: 0 !important;
-    height: 2px !important;
-    margin: -4px 0 0 0 !important;
-    cursor: pointer !important;
+    border: 1px solid var(--border) !important;
+    color: var(--muted) !important;
+    font-family: var(--mono) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    padding: 8px 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    transition: all 0.15s !important;
 }
 .stButton > button:hover {
-    background: transparent !important;
+    background: var(--surface2) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -503,29 +476,17 @@ if "page" not in st.session_state:
 # -- Top nav bar
 NAV_ITEMS = ["Home", "Schedule", "Predictor", "Results"]
 
-links_html = ""
-for item in NAV_ITEMS:
-    cls = "topnav-link active" if st.session_state.page == item else "topnav-link"
-    links_html += f'<span class="{cls}">{item}</span>'
+c0, c1, c2, c3, c4 = st.columns([3, 1, 1, 1, 1])
+with c1:
+    if st.button("Home",      use_container_width=True): st.session_state.page = "Home";      st.rerun()
+with c2:
+    if st.button("Schedule",  use_container_width=True): st.session_state.page = "Schedule";  st.rerun()
+with c3:
+    if st.button("Predictor", use_container_width=True): st.session_state.page = "Predictor"; st.rerun()
+with c4:
+    if st.button("Results",   use_container_width=True): st.session_state.page = "Results";   st.rerun()
 
-nav_html = (
-    '<div class="topnav">'
-    + '<div class="topnav-brand">World Cup Predictor'
-    + '<span style="color:#52527a;font-weight:400;font-size:11px;letter-spacing:0.1em;margin-left:12px;">2026 FIFA World Cup</span>'
-    + '</div>'
-    + '<div class="topnav-links">'
-    + links_html
-    + '</div></div>'
-)
-st.markdown(nav_html, unsafe_allow_html=True)
-
-nav_cols = st.columns([5, 1, 1, 1, 1])
-for i, item in enumerate(NAV_ITEMS):
-    with nav_cols[i + 1]:
-        if st.button(item, key="nav_" + item, use_container_width=True):
-            st.session_state.page = item
-            st.rerun()
-
+st.markdown("---")
 page = st.session_state.page
 
 if not MODEL_LOADED:
