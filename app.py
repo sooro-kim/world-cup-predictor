@@ -341,7 +341,7 @@ def prob_bar(label, pct, side):
     return (f'<div class="prob-row">'
             f'<div class="prob-label">{label[:14]}</div>'
             f'<div class="prob-track"><div class="prob-fill-{side}" style="width:{pct}%;"></div></div>'
-            f'<div class="prob-num">{pct:05.1f}%</div>'
+            f'<div class="prob-num">{pct:.1f}%</div>'
             f'</div>')
 
 def pred_tag(pred, home, away):
@@ -383,9 +383,9 @@ if page == 'Home':
 
     c1, c2, c3, c4 = st.columns(4)
     for col, (val, lbl) in zip([c1,c2,c3,c4], [
-        ("Win/Loss", "Prediction Type"),
-        ("192",      "Matches Validated"),
-        ("72",       "2026 Predictions"),
+        ("67.5%",     "Model Accuracy"),
+        ("192",       "Matches Validated"),
+        ("72",        "2026 Predictions"),
         (str(n_live), "Results Tracked"),
     ]):
         with col:
