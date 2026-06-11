@@ -633,11 +633,15 @@ elif page == "Predictor":
         away_team = st.selectbox("away", away_opts, index=away_opts.index('Argentina') if 'Argentina' in away_opts else 0, label_visibility="collapsed")
 
     st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.1em;text-transform:uppercase;margin:16px 0 6px 0;">Match Date</div>', unsafe_allow_html=True)
-    match_date = st.date_input("date", value=date(2026, 6, 15), label_visibility="collapsed")
+    match_date = st.date_input("date", value=date(2026, 6, 15), min_value=date(2011, 1, 1), max_value=date(2027, 12, 31), label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Run Prediction"):
-        with st.spinner("Computing..."):
+        too_far = pd.Timestamp(match_date) > pd.Timestamp.today() + pd.DateOffset(months=3)
+        if too_far:
+            st.warning("Not enough recent data available for a date this far in the future. Select a date within the next 3 months.")
+        else:
+          with st.spinner("Computing..."):
             try:
                 p = predict_match(home_team, away_team, pd.Timestamp(match_date))
                 pred = p['pred']
