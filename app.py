@@ -144,25 +144,25 @@ st.markdown("""
 # ── Load artifacts ────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    with open('data/model.pkl', 'rb') as f:
+    with open('model.pkl', 'rb') as f:
         model = pickle.load(f)
-    with open('data/label_encoder.pkl', 'rb') as f:
+    with open('label_encoder.pkl', 'rb') as f:
         le = pickle.load(f)
     return model, le
 
 @st.cache_data
 def load_upcoming():
-    return pd.read_csv('data/upcoming_2026.csv', parse_dates=['date'])
+    return pd.read_csv('upcoming_2026.csv', parse_dates=['date'])
 
 @st.cache_data
 def load_results():
-    if os.path.exists('data/predictions.csv'):
-        return pd.read_csv('data/predictions.csv', parse_dates=['date'])
+    if os.path.exists('predictions.csv'):
+        return pd.read_csv('predictions.csv', parse_dates=['date'])
     return None
 
 @st.cache_data
 def load_rankings():
-    df = pd.read_csv('data/fifa_ranking-2023-07-20.csv', parse_dates=['rank_date'])
+    df = pd.read_csv('fifa_ranking-2023-07-20.csv', parse_dates=['rank_date'])
     return df[['rank', 'country_full', 'rank_date']].sort_values('rank_date')
 
 @st.cache_data
