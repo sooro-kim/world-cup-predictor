@@ -46,19 +46,35 @@ section[data-testid="stSidebar"] {
     background-color: var(--surface) !important;
     border-right: 1px solid var(--border) !important;
 }
-section[data-testid="stSidebar"] * {
-    color: var(--text) !important;
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] div,
+section[data-testid="stSidebar"] label {
+    color: #d0d0e8 !important;
     font-family: var(--sans) !important;
-}
-section[data-testid="stSidebar"] .stRadio label {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    padding: 8px 0 !important;
 }
 section[data-testid="stSidebar"] hr {
     border-color: var(--border) !important;
+}
+/* Radio nav labels */
+section[data-testid="stSidebar"] .stRadio > div > label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    padding: 6px 0 !important;
+    color: #d0d0e8 !important;
+}
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 4px !important;
+}
+/* Radio circle */
+section[data-testid="stSidebar"] .stRadio input[type="radio"] + div {
+    border-color: #52527a !important;
+}
+section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + div {
+    border-color: var(--accent) !important;
+    background-color: var(--accent) !important;
 }
 
 /* Remove default padding */
@@ -333,6 +349,36 @@ NAME_MAP = {
     'Czechia': 'Czechia', 'Turkey': 'Türkiye', 'Curacao': 'Curaçao',
 }
 
+TEAM_ALIASES = {
+    # Name changes adopted by martj42 dataset
+    'Czech Republic':         ['Czech Republic', 'Czechia'],
+    'Czechia':                ['Czechia', 'Czech Republic'],
+    'Turkey':                 ['Turkey', 'Türkiye'],
+    'Türkiye':                ['Türkiye', 'Turkey'],
+    # African team names
+    'Ivory Coast':            ['Ivory Coast', "Côte d'Ivoire"],
+    "Côte d'Ivoire":         ["Côte d'Ivoire", 'Ivory Coast'],
+    'DR Congo':               ['DR Congo', 'Congo DR', 'Democratic Republic of the Congo'],
+    'Cape Verde':             ['Cape Verde', 'Cape Verde Islands'],
+    # Special characters
+    'Curacao':                ['Curacao', 'Curaçao'],
+    'Curaçao':                ['Curaçao', 'Curacao'],
+    # Long names
+    'Bosnia and Herzegovina': ['Bosnia and Herzegovina', 'Bosnia-Herzegovina', 'Bosnia & Herzegovina'],
+    'North Macedonia':        ['North Macedonia', 'Macedonia'],
+    # US name variants
+    'United States':          ['United States', 'USA', 'United States of America'],
+    # South Korea
+    'South Korea':            ['South Korea', 'Korea Republic', 'Korea, Republic of'],
+    # Iran
+    'Iran':                   ['Iran', 'IR Iran'],
+    # Saudi Arabia
+    'Saudi Arabia':           ['Saudi Arabia', 'KSA'],
+}
+
+def resolve_names(team):
+    return TEAM_ALIASES.get(team, [team])
+
 FEATURE_COLS = ['h_form','h_gf','h_ga','h_gd','h_h2h','h_rank',
                 'a_form','a_gf','a_ga','a_gd','a_h2h','a_rank',
                 'rank_diff','form_diff','gf_diff','gd_diff','neutral']
@@ -346,9 +392,10 @@ def get_rank(team, match_date, default=80):
 
 def get_team_form(team, match_date, opponent, all_results, window_months=12):
     cutoff = match_date - pd.DateOffset(months=window_months)
+    names = resolve_names(team)
     mask = (
         (all_results['date'] < match_date) & (all_results['date'] >= cutoff) &
-        ((all_results['home_team'] == team) | (all_results['away_team'] == team))
+        (all_results['home_team'].isin(names) | all_results['away_team'].isin(names))
     )
     tm = all_results[mask]
     if len(tm) == 0:
@@ -358,7 +405,7 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
     tm['is_friendly'] = tm['tournament'].str.contains('Friendly', case=False, na=False)
     form_scores, gf_list, ga_list = [], [], []
     for _, row in tm.iterrows():
-        is_home = row['home_team'] == team
+        is_home = row['home_team'] in names
         gf = row['home_score'] if is_home else row['away_score']
         ga = row['away_score'] if is_home else row['home_score']
         opp = row['away_team'] if is_home else row['home_team']
@@ -366,10 +413,13 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
         w = (1 / np.sqrt(opp_rank)) * (0.5 if row.get('is_friendly', False) else 1.0)
         form_scores.append(w * (1 if gf > ga else 0))
         gf_list.append(gf); ga_list.append(ga)
+    opp_names = resolve_names(opponent)
     h2h = all_results[
         (all_results['date'] < match_date) &
-        (((all_results['home_team'] == team) & (all_results['away_team'] == opponent)) |
-         ((all_results['away_team'] == team) & (all_results['home_team'] == opponent)))
+        (
+            (all_results['home_team'].isin(names)     & all_results['away_team'].isin(opp_names)) |
+            (all_results['away_team'].isin(names) & all_results['home_team'].isin(opp_names))
+        )
     ]
     h2h_rate = 0.5
     if len(h2h) > 0:
