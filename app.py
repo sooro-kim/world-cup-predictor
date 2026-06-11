@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="World Cup Predictor",
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 st.markdown("""
@@ -41,42 +41,43 @@ html, body, [class*="css"] {
 
 .stApp { background-color: var(--bg) !important; }
 
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: var(--surface) !important;
-    border-right: 1px solid var(--border) !important;
-    min-width: 220px !important;
-    max-width: 220px !important;
+/* Hide sidebar entirely */
+section[data-testid="stSidebar"] { display: none !important; }
+button[data-testid="collapsedControl"] { display: none !important; }
+
+/* Top nav bar */
+.topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 20px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
 }
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span,
-section[data-testid="stSidebar"] div,
-section[data-testid="stSidebar"] label {
-    color: #d0d0e8 !important;
-    font-family: var(--sans) !important;
+.topnav-brand {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #ffffff;
 }
-section[data-testid="stSidebar"] hr {
-    border-color: var(--border) !important;
+.topnav-links {
+    display: flex;
+    gap: 32px;
+    align-items: center;
 }
-/* Radio nav labels */
-section[data-testid="stSidebar"] .stRadio > div > label {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-    padding: 6px 0 !important;
-    color: #d0d0e8 !important;
+.topnav-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    padding-bottom: 2px;
 }
-section[data-testid="stSidebar"] .stRadio > div {
-    gap: 4px !important;
-}
-/* Radio circle */
-section[data-testid="stSidebar"] .stRadio input[type="radio"] + div {
-    border-color: #52527a !important;
-}
-section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + div {
-    border-color: var(--accent) !important;
-    background-color: var(--accent) !important;
+.topnav-link.active {
+    color: #ffffff;
+    border-bottom: 1px solid var(--accent);
 }
 
 /* Remove default padding */
@@ -305,19 +306,18 @@ header    { visibility: hidden; }
 button[data-testid="collapsedControl"] { display: none !important; }
 section[data-testid="stSidebar"] > div:first-child { padding-top: 2rem !important; }
 
-/* Nav buttons — make them invisible as buttons, look like nav items */
-section[data-testid="stSidebar"] .stButton > button {
+/* Nav buttons in topnav — invisible, full width overlay */
+.stButton > button {
     background: transparent !important;
     border: none !important;
     color: transparent !important;
     font-size: 1px !important;
     padding: 0 !important;
-    height: 1px !important;
-    margin: -6px 0 4px 0 !important;
-    width: 100% !important;
+    height: 2px !important;
+    margin: -4px 0 0 0 !important;
     cursor: pointer !important;
 }
-section[data-testid="stSidebar"] .stButton > button:hover {
+.stButton > button:hover {
     background: transparent !important;
 }
 </style>
@@ -496,27 +496,35 @@ def tag_html(pred, home, away):
     else:
         return f'<span class="tag tag-away">{away[:12]}</span>'
 
-# ── Navigation state ─────────────────────────────────────────────────────────
-if 'page' not in st.session_state:
-    st.session_state.page = 'Home'
+# -- Navigation state
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown('<div style="font-size:18px;font-weight:700;letter-spacing:-0.01em;color:#fff;margin-bottom:4px;">World Cup Predictor</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:20px;">2026 FIFA World Cup</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    for item in ["Home", "Schedule", "Predictor", "Results"]:
-        is_active = st.session_state.page == item
-        color  = "#4f9fff" if is_active else "#d0d0e8"
-        border = "border-left:2px solid #4f9fff;padding-left:10px;" if is_active else "border-left:2px solid #1c1c30;padding-left:10px;"
-        st.markdown(f'<div style="font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:5px 0;{border}color:{color};">{item}</div>', unsafe_allow_html=True)
-        if st.button(item, key=f"nav_{item}", use_container_width=True):
+# -- Top nav bar
+NAV_ITEMS = ["Home", "Schedule", "Predictor", "Results"]
+
+links_html = ""
+for item in NAV_ITEMS:
+    cls = "topnav-link active" if st.session_state.page == item else "topnav-link"
+    links_html += f'<span class="{cls}">{item}</span>'
+
+nav_html = (
+    '<div class="topnav">'
+    + '<div class="topnav-brand">World Cup Predictor'
+    + '<span style="color:#52527a;font-weight:400;font-size:11px;letter-spacing:0.1em;margin-left:12px;">2026 FIFA World Cup</span>'
+    + '</div>'
+    + '<div class="topnav-links">'
+    + links_html
+    + '</div></div>'
+)
+st.markdown(nav_html, unsafe_allow_html=True)
+
+nav_cols = st.columns([5, 1, 1, 1, 1])
+for i, item in enumerate(NAV_ITEMS):
+    with nav_cols[i + 1]:
+        if st.button(item, key="nav_" + item, use_container_width=True):
             st.session_state.page = item
             st.rerun()
-    st.markdown("---")
-    st.markdown('<div style="font-size:11px;color:#52527a;line-height:1.8;letter-spacing:0.04em;">MODEL — XGBoost<br>TRAINED — 2010–2022<br>ACCURACY — 54.7%<br>MATCHES — 192 tested</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown('<div style="font-size:11px;color:#52527a;">github.com/sooro-kim</div>', unsafe_allow_html=True)
 
 page = st.session_state.page
 
