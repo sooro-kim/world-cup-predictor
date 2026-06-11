@@ -59,12 +59,38 @@ def get_rank(team, match_date, default=80):
     past = td[td['rank_date'] <= match_date]
     return int(past.iloc[-1]['rank']) if len(past) > 0 else int(td.iloc[0]['rank'])
 
+# Team name aliases — martj42 dataset changed some names over time
+# This ensures we find all historical matches regardless of name changes
+TEAM_ALIASES = {
+    'Czech Republic':         ['Czech Republic', 'Czechia'],
+    'Czechia':                ['Czechia', 'Czech Republic'],
+    'Turkey':                 ['Turkey', 'Türkiye'],
+    'Türkiye':                ['Türkiye', 'Turkey'],
+    'Ivory Coast':            ['Ivory Coast', "Côte d'Ivoire"],
+    "Côte d'Ivoire":         ["Côte d'Ivoire", 'Ivory Coast'],
+    'DR Congo':               ['DR Congo', 'Congo DR', 'Democratic Republic of the Congo'],
+    'Cape Verde':             ['Cape Verde', 'Cape Verde Islands'],
+    'Curacao':                ['Curacao', 'Curaçao'],
+    'Curaçao':                ['Curaçao', 'Curacao'],
+    'Bosnia and Herzegovina': ['Bosnia and Herzegovina', 'Bosnia-Herzegovina', 'Bosnia & Herzegovina'],
+    'North Macedonia':        ['North Macedonia', 'Macedonia'],
+    'United States':          ['United States', 'USA', 'United States of America'],
+    'South Korea':            ['South Korea', 'Korea Republic', 'Korea, Republic of'],
+    'Iran':                   ['Iran', 'IR Iran'],
+    'Saudi Arabia':           ['Saudi Arabia', 'KSA'],
+}
+
+def resolve_names(team):
+    """Returns all known aliases for a team name."""
+    return TEAM_ALIASES.get(team, [team])
+
 def get_team_form(team, match_date, opponent, all_results, window_months=12):
     cutoff = match_date - pd.DateOffset(months=window_months)
+    names = resolve_names(team)
     mask = (
         (all_results['date'] < match_date) &
         (all_results['date'] >= cutoff) &
-        ((all_results['home_team'] == team) | (all_results['away_team'] == team))
+        (all_results['home_team'].isin(names) | all_results['away_team'].isin(names))
     )
     tm = all_results[mask]
     if len(tm) == 0:
@@ -73,7 +99,7 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
 
     form_scores, gf_list, ga_list = [], [], []
     for _, row in tm.iterrows():
-        is_home = row['home_team'] == team
+        is_home = row['home_team'] in names
         gf = row['home_score'] if is_home else row['away_score']
         ga = row['away_score'] if is_home else row['home_score']
         opp = row['away_team'] if is_home else row['home_team']
@@ -83,10 +109,13 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
         gf_list.append(gf)
         ga_list.append(ga)
 
+    opp_names = resolve_names(opponent)
     h2h = all_results[
         (all_results['date'] < match_date) &
-        (((all_results['home_team'] == team) & (all_results['away_team'] == opponent)) |
-         ((all_results['away_team'] == team) & (all_results['home_team'] == opponent)))
+        (
+            (all_results['home_team'].isin(names)     & all_results['away_team'].isin(opp_names)) |
+            (all_results['away_team'].isin(names) & all_results['home_team'].isin(opp_names))
+        )
     ]
     h2h_wins = sum(
         1 for _, r in h2h.iterrows()
