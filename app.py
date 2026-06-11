@@ -5,149 +5,291 @@ import pickle
 from datetime import date
 import os
 
-# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="World Cup Predictor",
-    page_icon="⚽",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #1a5c38;
-    }
-    section[data-testid="stSidebar"] * {
-        color: white !important;
-    }
-    section[data-testid="stSidebar"] .stRadio label {
-        font-size: 16px !important;
-        font-weight: 600 !important;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-    /* Main */
-    .main { background-color: #f4faf6; }
+:root {
+    --bg:        #07070f;
+    --surface:   #0d0d1c;
+    --surface2:  #121224;
+    --border:    #1c1c30;
+    --border2:   #2a2a40;
+    --text:      #d0d0e8;
+    --muted:     #52527a;
+    --accent:    #4f9fff;
+    --adim:      rgba(79,159,255,0.08);
+    --home:      #4f9fff;
+    --draw:      #ffcc00;
+    --away:      #ff4466;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'Space Grotesk', sans-serif;
+}
 
-    /* Headings */
-    h1 { color: #1a5c38 !important; font-weight: 900 !important; font-size: 2.4rem !important; }
-    h2 { color: #1a5c38 !important; font-weight: 700 !important; }
-    h3 { color: #1a5c38 !important; font-weight: 600 !important; }
+html, body, [class*="css"] {
+    font-family: var(--sans) !important;
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
 
-    /* Metric card */
-    .metric-card {
-        background: white;
-        border-top: 4px solid #1a5c38;
-        border-radius: 10px;
-        padding: 18px 20px;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 10px;
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 900;
-        color: #1a5c38;
-        line-height: 1;
-    }
-    .metric-label {
-        font-size: 0.85rem;
-        color: #666;
-        margin-top: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+.stApp { background-color: var(--bg) !important; }
 
-    /* Match card */
-    .match-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-        border-left: 5px solid #1a5c38;
-    }
-    .match-teams {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a1a1a;
-    }
-    .match-date {
-        font-size: 0.8rem;
-        color: #888;
-        margin-bottom: 8px;
-    }
-    .prob-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 4px;
-        font-size: 0.85rem;
-    }
-    .prob-label { width: 90px; color: #555; }
-    .prob-bar-bg {
-        flex: 1;
-        background: #e8f5ee;
-        border-radius: 4px;
-        height: 14px;
-        margin: 0 8px;
-        overflow: hidden;
-    }
-    .prob-bar-fill {
-        height: 100%;
-        background: #1a5c38;
-        border-radius: 4px;
-    }
-    .prob-val { width: 40px; text-align: right; font-weight: 700; color: #1a5c38; }
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: var(--surface) !important;
+    border-right: 1px solid var(--border) !important;
+}
+section[data-testid="stSidebar"] * {
+    color: var(--text) !important;
+    font-family: var(--sans) !important;
+}
+section[data-testid="stSidebar"] .stRadio label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    padding: 8px 0 !important;
+}
+section[data-testid="stSidebar"] hr {
+    border-color: var(--border) !important;
+}
 
-    /* Prediction badge */
-    .badge-win  { background:#1a5c38; color:white; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:700; }
-    .badge-draw { background:#f0a500; color:white; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:700; }
-    .badge-away { background:#c0392b; color:white; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:700; }
+/* Remove default padding */
+.block-container { padding: 2rem 2.5rem !important; max-width: 1400px !important; }
 
-    /* Group header */
-    .group-header {
-        background: #1a5c38;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 1rem;
-        margin: 16px 0 8px 0;
-    }
+/* Headings */
+h1 { font-family: var(--sans) !important; font-weight: 700 !important;
+     font-size: 2rem !important; letter-spacing: -0.02em !important;
+     color: #ffffff !important; margin-bottom: 4px !important; }
+h2 { font-family: var(--sans) !important; font-weight: 600 !important;
+     font-size: 1.1rem !important; letter-spacing: 0.06em !important;
+     text-transform: uppercase !important; color: var(--muted) !important;
+     margin-bottom: 24px !important; }
+h3 { font-family: var(--sans) !important; font-weight: 600 !important;
+     color: #ffffff !important; font-size: 0.9rem !important;
+     letter-spacing: 0.08em !important; text-transform: uppercase !important; }
 
-    /* Correct/Incorrect */
-    .correct   { color: #1a5c38; font-weight: 700; }
-    .incorrect { color: #c0392b; font-weight: 700; }
+/* Divider */
+hr { border: none !important; border-top: 1px solid var(--border) !important; margin: 24px 0 !important; }
 
-    /* Buttons */
-    .stButton > button {
-        background-color: #1a5c38 !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 10px 24px !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        width: 100% !important;
-    }
-    .stButton > button:hover {
-        background-color: #145030 !important;
-    }
+/* Metric tile */
+.tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    margin-bottom: 12px;
+}
+.tile-val {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1;
+}
+.tile-lbl {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 6px;
+}
+.tile-accent { border-left: 2px solid var(--accent); }
 
-    /* Divider */
-    hr { border-color: #c8e6d4; }
+/* Match row */
+.match-row {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border2);
+    background: var(--surface);
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+}
+.match-row:hover { border-color: var(--border2); border-left-color: var(--accent); }
+.match-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+.match-teams {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+.match-vs { color: var(--muted); font-weight: 400; margin: 0 8px; }
+
+/* Probability bar */
+.prob-row { display: flex; align-items: center; margin-bottom: 5px; }
+.prob-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.prob-track {
+    flex: 1;
+    background: var(--surface2);
+    height: 3px;
+    margin: 0 12px;
+}
+.prob-fill-home { background: var(--home); height: 3px; }
+.prob-fill-draw { background: var(--draw); height: 3px; }
+.prob-fill-away { background: var(--away); height: 3px; }
+.prob-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    width: 42px;
+    text-align: right;
+}
+
+/* Prediction tag */
+.tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    margin-top: 8px;
+    font-family: var(--mono);
+}
+.tag-home { background: rgba(79,159,255,0.12); color: var(--home); border: 1px solid rgba(79,159,255,0.25); }
+.tag-draw { background: rgba(255,204,0,0.12);  color: var(--draw); border: 1px solid rgba(255,204,0,0.25); }
+.tag-away { background: rgba(255,68,102,0.12); color: var(--away); border: 1px solid rgba(255,68,102,0.25); }
+
+/* Section label */
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Groups grid */
+.group-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+}
+.group-letter {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+}
+.group-team {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    padding: 2px 0;
+}
+
+/* Big number display */
+.big-prob {
+    font-family: var(--mono);
+    font-size: 3rem;
+    font-weight: 500;
+    line-height: 1;
+}
+.big-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 8px;
+}
+.prob-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px 24px;
+    text-align: center;
+}
+.prob-panel.active-home { border-top: 2px solid var(--home); }
+.prob-panel.active-draw { border-top: 2px solid var(--draw); }
+.prob-panel.active-away { border-top: 2px solid var(--away); }
+
+/* Result row */
+.result-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.result-correct { color: var(--home); font-family: var(--mono); font-size: 11px; }
+.result-wrong   { color: var(--away); font-family: var(--mono); font-size: 11px; }
+
+/* Selectbox */
+.stSelectbox > div > div {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: 0 !important;
+    font-family: var(--sans) !important;
+}
+
+/* Button */
+.stButton > button {
+    background: var(--accent) !important;
+    color: #000000 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: var(--mono) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    padding: 12px 32px !important;
+    width: 100% !important;
+}
+.stButton > button:hover { background: #6fb0ff !important; }
+
+/* Date input */
+.stDateInput > div > div {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+}
+
+/* Radio */
+.stRadio > div { gap: 0 !important; }
+
+/* Hide streamlit branding */
+#MainMenu { visibility: hidden; }
+footer    { visibility: hidden; }
+header    { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Load artifacts ────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    with open('model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    with open('label_encoder.pkl', 'rb') as f:
-        le = pickle.load(f)
+    with open('model.pkl', 'rb') as f: model = pickle.load(f)
+    with open('label_encoder.pkl', 'rb') as f: le = pickle.load(f)
     return model, le
 
 @st.cache_data
@@ -155,7 +297,7 @@ def load_upcoming():
     return pd.read_csv('upcoming_2026.csv', parse_dates=['date'])
 
 @st.cache_data
-def load_results():
+def load_past():
     if os.path.exists('predictions.csv'):
         return pd.read_csv('predictions.csv', parse_dates=['date'])
     return None
@@ -175,26 +317,20 @@ def load_results_data():
 try:
     model, le = load_model()
     upcoming_df = load_upcoming()
-    past_df = load_results()
+    past_df = load_past()
     ranking_df = load_rankings()
     MODEL_LOADED = True
 except Exception as e:
     MODEL_LOADED = False
-    st.error(f"Error loading model: {e}. Please run save_model.py first.")
+    st.error(f"Error loading model: {e}")
 
-# ── Feature helpers ───────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 NAME_MAP = {
-    'United States':          'USA',
-    'South Korea':            'Korea Republic',
-    'Iran':                   'IR Iran',
-    'Bosnia and Herzegovina': 'Bosnia-Herzegovina',
-    'Ivory Coast':            "Côte d'Ivoire",
-    'Cape Verde':             'Cape Verde Islands',
-    'DR Congo':               'DR Congo',
-    'Czech Republic':         'Czechia',
-    'Czechia':                'Czechia',
-    'Turkey':                 'Türkiye',
-    'Curacao':                'Curaçao',
+    'United States': 'USA', 'South Korea': 'Korea Republic',
+    'Iran': 'IR Iran', 'Bosnia and Herzegovina': 'Bosnia-Herzegovina',
+    'Ivory Coast': "Côte d'Ivoire", 'Cape Verde': 'Cape Verde Islands',
+    'DR Congo': 'DR Congo', 'Czech Republic': 'Czechia',
+    'Czechia': 'Czechia', 'Turkey': 'Türkiye', 'Curacao': 'Curaçao',
 }
 
 FEATURE_COLS = ['h_form','h_gf','h_ga','h_gd','h_h2h','h_rank',
@@ -218,6 +354,7 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
     if len(tm) == 0:
         return {'form_score': 0.5, 'goals_scored': 1.0, 'goals_conceded': 1.0,
                 'goal_diff': 0.0, 'h2h_winrate': 0.5}
+    tm = tm.copy()
     tm['is_friendly'] = tm['tournament'].str.contains('Friendly', case=False, na=False)
     form_scores, gf_list, ga_list = [], [], []
     for _, row in tm.iterrows():
@@ -245,10 +382,10 @@ def get_team_form(team, match_date, opponent, all_results, window_months=12):
             'goals_conceded': gc, 'goal_diff': gs - gc, 'h2h_winrate': h2h_rate}
 
 def predict_match(home, away, match_date):
-    results_data = load_results_data()
-    results_data['is_friendly'] = results_data['tournament'].str.contains('Friendly', case=False, na=False)
-    hf = get_team_form(home, match_date, away, results_data)
-    af = get_team_form(away, match_date, home, results_data)
+    rd = load_results_data()
+    rd['is_friendly'] = rd['tournament'].str.contains('Friendly', case=False, na=False)
+    hf = get_team_form(home, match_date, away, rd)
+    af = get_team_form(away, match_date, home, rd)
     hr, ar = get_rank(home, match_date), get_rank(away, match_date)
     X = pd.DataFrame([{
         'h_form': hf['form_score'], 'h_gf': hf['goals_scored'],
@@ -271,340 +408,284 @@ def predict_match(home, away, match_date):
         'pred':     classes[np.argmax(proba)],
     }
 
-def prob_bar(label, pct, color='#1a5c38'):
+def prob_bar_html(label, pct, cls):
     return f"""
     <div class="prob-row">
-        <div class="prob-label">{label}</div>
-        <div class="prob-bar-bg">
-            <div class="prob-bar-fill" style="width:{pct}%;background:{color};"></div>
-        </div>
-        <div class="prob-val">{pct}%</div>
+        <div class="prob-label">{label[:14]}</div>
+        <div class="prob-track"><div class="prob-fill-{cls}" style="width:{pct}%;"></div></div>
+        <div class="prob-num">{pct:05.2f}%</div>
     </div>"""
 
-def pred_badge(pred):
-    if 'home' in pred.lower():
-        return '<span class="badge-win">Home Win</span>'
-    elif 'draw' in pred.lower():
-        return '<span class="badge-draw">Draw</span>'
+def tag_html(pred, home, away):
+    if 'home' in pred:
+        return f'<span class="tag tag-home">{home[:12]}</span>'
+    elif 'draw' in pred:
+        return '<span class="tag tag-draw">Draw</span>'
     else:
-        return '<span class="badge-away">Away Win</span>'
+        return f'<span class="tag tag-away">{away[:12]}</span>'
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## ⚽ World Cup Predictor")
+    st.markdown('<div style="font-size:18px;font-weight:700;letter-spacing:-0.01em;color:#fff;margin-bottom:4px;">World Cup Predictor</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:20px;">2026 FIFA World Cup</div>', unsafe_allow_html=True)
     st.markdown("---")
     page = st.radio(
-        "Navigate",
-        ["🏠 Home", "📅 Upcoming Matches", "🔮 Custom Prediction", "📊 Past Results"],
+        "nav",
+        ["Home", "Schedule", "Predictor", "Results"],
         label_visibility="collapsed"
     )
     st.markdown("---")
-    st.markdown("**Model:** XGBoost")
-    st.markdown("**Data:** 2010 – 2022 World Cups")
-    st.markdown("**Features:** Form, Goals, H2H, FIFA Rank")
+    st.markdown('<div style="font-size:11px;color:#52527a;line-height:1.8;letter-spacing:0.04em;">MODEL — XGBoost<br>TRAINED — 2010–2022<br>ACCURACY — 54.7%<br>MATCHES — 192 tested</div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("Made by [sooro-kim](https://github.com/sooro-kim)")
+    st.markdown('<div style="font-size:11px;color:#52527a;">github.com/sooro-kim</div>', unsafe_allow_html=True)
 
 if not MODEL_LOADED:
     st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — HOME
+# HOME
 # ══════════════════════════════════════════════════════════════════════════════
-if page == "🏠 Home":
-    st.markdown("# ⚽ World Cup Predictor")
-    st.markdown("**Machine learning predictions for every 2026 FIFA World Cup match.**")
+if page == "Home":
+    st.markdown("# World Cup Predictor")
+    st.markdown("## Machine learning match outcome predictions")
     st.markdown("---")
 
-    # Stats row
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown('<div class="metric-card"><div class="metric-value">54.7%</div><div class="metric-label">Model Accuracy</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="metric-card"><div class="metric-value">42.7%</div><div class="metric-label">Baseline Accuracy</div></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="metric-card"><div class="metric-value">192</div><div class="metric-label">Matches Tested</div></div>', unsafe_allow_html=True)
-    with col4:
-        n = len(upcoming_df) if upcoming_df is not None else 72
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{n}</div><div class="metric-label">2026 Predictions</div></div>', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    tiles = [
+        ("54.7%", "Model Accuracy"),
+        ("42.7%", "Naive Baseline"),
+        ("192", "Matches Validated"),
+        ("72", "2026 Predictions"),
+    ]
+    for col, (val, lbl) in zip([c1, c2, c3, c4], tiles):
+        with col:
+            st.markdown(f'<div class="tile tile-accent"><div class="tile-val">{val}</div><div class="tile-lbl">{lbl}</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
+    col_l, col_r = st.columns([3, 2])
 
-    col_left, col_right = st.columns([3, 2])
-    with col_left:
-        st.markdown("### How It Works")
+    with col_l:
+        st.markdown('<div class="section-label">Methodology</div>', unsafe_allow_html=True)
         st.markdown("""
-The model is an **XGBoost classifier** trained on all four World Cups from 2010 to 2022.
-For each match, it computes rolling features from the 12 months of international football
-played by each team before the match.
+**XGBoost classifier** trained on 256 World Cup matches from 2010 to 2022.
+Walk-forward validation — each tournament predicted using only prior data.
 
-**Features used:**
-- **Quality-adjusted form score** — win rate weighted by opponent FIFA ranking. Beating Brazil counts more than beating Curacao. Friendly wins count at half weight.
-- **Goals scored / conceded** — average per match over the past 12 months
-- **Head-to-head win rate** — historical record between the two specific teams
-- **FIFA ranking difference** — pre-match ranking gap between the two teams
+**Features**
 
-**Validation method:** Walk-forward — train on all tournaments before the test year,
-predict that year without ever seeing future data.
+Each team's rolling statistics over the 12 months before the match:
+
+- **Quality-adjusted form** — win rate weighted by opponent FIFA ranking. A win against Brazil carries more signal than a win against a lower-ranked side. Friendly matches receive 0.5x weight.
+- **Attack / defense metrics** — average goals scored and conceded per match
+- **Head-to-head record** — historical win rate between the two specific teams
+- **FIFA ranking differential** — pre-match ranking gap
+
+**Validation results**
+
+The model outperformed the naive baseline (always predict the most common outcome) in all three test tournaments: 2014, 2018, and 2022. Overall accuracy: 54.7% versus 42.7% baseline on a 3-class problem.
         """)
 
-        st.markdown("### Tournament Info")
-        st.markdown("""
-| | |
-|---|---|
-| **Dates** | June 11 – July 19, 2026 |
-| **Host nations** | USA, Canada, Mexico |
-| **Teams** | 48 (expanded from 32) |
-| **Total matches** | 104 |
-| **Groups** | 12 groups of 4 |
-| **Format** | Top 2 + 8 best 3rd-place → Round of 32 |
-        """)
-
-    with col_right:
-        st.markdown("### 2026 Groups")
-        groups = {
-            'A': 'Mexico · South Korea · South Africa · Czech Republic',
-            'B': 'Canada · Switzerland · Qatar · Bosnia-Herzegovina',
-            'C': 'Brazil · Morocco · Haiti · Scotland',
-            'D': 'USA · Australia · Paraguay · Turkey',
-            'E': 'Germany · Ecuador · Ivory Coast · Curaçao',
-            'F': 'Netherlands · Japan · Sweden · Tunisia',
-            'G': 'Belgium · Iran · Egypt · New Zealand',
-            'H': 'Spain · Uruguay · Saudi Arabia · Cape Verde',
-            'I': 'France · Senegal · Norway · Iraq',
-            'J': 'Argentina · Algeria · Austria · Jordan',
-            'K': 'Portugal · Colombia · DR Congo · Uzbekistan',
-            'L': 'England · Croatia · Ghana · Panama',
+    with col_r:
+        st.markdown('<div class="section-label">2026 Groups</div>', unsafe_allow_html=True)
+        GROUPS = {
+            'A': ['Mexico', 'South Korea', 'South Africa', 'Czech Republic'],
+            'B': ['Canada', 'Switzerland', 'Qatar', 'Bosnia-Herzegovina'],
+            'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+            'D': ['United States', 'Australia', 'Paraguay', 'Turkey'],
+            'E': ['Germany', 'Ecuador', 'Ivory Coast', 'Curacao'],
+            'F': ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
+            'G': ['Belgium', 'Iran', 'Egypt', 'New Zealand'],
+            'H': ['Spain', 'Uruguay', 'Saudi Arabia', 'Cape Verde'],
+            'I': ['France', 'Senegal', 'Norway', 'Iraq'],
+            'J': ['Argentina', 'Algeria', 'Austria', 'Jordan'],
+            'K': ['Portugal', 'Colombia', 'DR Congo', 'Uzbekistan'],
+            'L': ['England', 'Croatia', 'Ghana', 'Panama'],
         }
-        for g, teams in groups.items():
-            st.markdown(f"**Group {g}:** {teams}")
+        for g, teams in GROUPS.items():
+            teams_html = ''.join(f'<div class="group-team">{t}</div>' for t in teams)
+            st.markdown(f'<div class="group-tile"><div class="group-letter">GROUP {g}</div>{teams_html}</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — UPCOMING MATCHES
+# SCHEDULE
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "📅 Upcoming Matches":
-    st.markdown("# 📅 2026 World Cup — Group Stage Predictions")
-    st.markdown("All 72 group stage matches predicted using the XGBoost model.")
+elif page == "Schedule":
+    st.markdown("# 2026 Group Stage")
+    st.markdown("## All 72 matches — predicted probabilities")
     st.markdown("---")
 
     if upcoming_df is None:
-        st.error("upcoming_2026.csv not found. Please run save_model.py first.")
+        st.error("upcoming_2026.csv not found.")
         st.stop()
 
-    # Filter controls
     col1, col2 = st.columns([2, 3])
     with col1:
-        all_groups = ['All Groups'] + sorted(upcoming_df['group'].unique().tolist())
-        selected_group = st.selectbox("Filter by Group", all_groups)
+        all_groups = ['All'] + sorted(upcoming_df['group'].unique().tolist())
+        selected = st.selectbox("Group", all_groups)
     with col2:
         today = pd.Timestamp('today').normalize()
-        view = st.radio("Show", ["All Matches", "Upcoming Only", "Played Only"],
-                        horizontal=True)
+        view = st.radio("Filter", ["All", "Upcoming", "Played"], horizontal=True)
 
     filtered = upcoming_df.copy()
-    if selected_group != 'All Groups':
-        filtered = filtered[filtered['group'] == selected_group]
-    if view == "Upcoming Only":
+    if selected != 'All':
+        filtered = filtered[filtered['group'] == selected]
+    if view == "Upcoming":
         filtered = filtered[filtered['date'] >= today]
-    elif view == "Played Only":
+    elif view == "Played":
         filtered = filtered[filtered['date'] < today]
 
-    st.markdown(f"**Showing {len(filtered)} matches**")
+    st.markdown(f'<div style="font-size:11px;color:#52527a;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:16px;">{len(filtered)} matches</div>', unsafe_allow_html=True)
 
-    # Display by group
     for grp in sorted(filtered['group'].unique()):
-        st.markdown(f'<div class="group-header">{grp}</div>', unsafe_allow_html=True)
-        grp_matches = filtered[filtered['group'] == grp].sort_values('date')
-
-        for _, row in grp_matches.iterrows():
-            date_str = row['date'].strftime('%b %d, %Y') if hasattr(row['date'], 'strftime') else str(row['date'])[:10]
-            hw = row['home_win_pct']
-            dr = row['draw_pct']
-            aw = row['away_win_pct']
-            pred = row['prediction']
-
+        st.markdown(f'<div style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#4f9fff;padding:12px 0 8px 0;border-bottom:1px solid #1c1c30;margin-bottom:8px;">{grp}</div>', unsafe_allow_html=True)
+        grp_df = filtered[filtered['group'] == grp].sort_values('date')
+        for _, row in grp_df.iterrows():
+            d = row['date'].strftime('%d %b') if hasattr(row['date'], 'strftime') else str(row['date'])[:10]
+            hw, dr, aw = row['home_win_pct'], row['draw_pct'], row['away_win_pct']
+            pred = row['prediction'].lower()
+            rank_line = f"#{int(row['home_rank'])} · {int(row['away_rank'])}#"
             html = f"""
-            <div class="match-card">
-                <div class="match-date">{date_str}</div>
-                <div class="match-teams">{row['home_team']} <span style="color:#888;font-weight:400">vs</span> {row['away_team']}</div>
-                <div style="margin:8px 0 4px 0;font-size:0.8rem;color:#888;">
-                    FIFA Rank: {row['home_team']} #{int(row['home_rank'])} &nbsp;|&nbsp; {row['away_team']} #{int(row['away_rank'])}
-                </div>
-                {prob_bar(row['home_team'][:12], hw)}
-                {prob_bar('Draw', dr, '#f0a500')}
-                {prob_bar(row['away_team'][:12], aw, '#c0392b')}
-                <div style="margin-top:8px;">Prediction: {pred_badge(pred)}</div>
-            </div>
-            """
+            <div class="match-row">
+                <div class="match-label">{d} &nbsp;·&nbsp; {rank_line}</div>
+                <div class="match-teams">{row['home_team']}<span class="match-vs">—</span>{row['away_team']}</div>
+                {prob_bar_html(row['home_team'], hw, 'home')}
+                {prob_bar_html('Draw', dr, 'draw')}
+                {prob_bar_html(row['away_team'], aw, 'away')}
+                {tag_html(pred, row['home_team'], row['away_team'])}
+            </div>"""
             st.markdown(html, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE 3 — CUSTOM PREDICTION
+# PREDICTOR
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "🔮 Custom Prediction":
-    st.markdown("# 🔮 Custom Match Prediction")
-    st.markdown("Pick any two teams and get a prediction.")
+elif page == "Predictor":
+    st.markdown("# Match Predictor")
+    st.markdown("## Select two teams to generate a probability forecast")
     st.markdown("---")
 
     ALL_TEAMS = sorted([
-        'Argentina', 'Australia', 'Algeria', 'Austria', 'Belgium', 'Bolivia',
-        'Bosnia and Herzegovina', 'Brazil', 'Cameroon', 'Canada', 'Cape Verde',
-        'Chile', 'Colombia', 'Costa Rica', 'Croatia', 'Cuba', 'Czech Republic',
-        'Denmark', 'DR Congo', 'Ecuador', 'Egypt', 'England', 'France',
-        'Germany', 'Ghana', 'Greece', 'Haiti', 'Honduras', 'Hungary', 'Iran',
-        'Iraq', 'Ireland', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan',
-        'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
-        'Panama', 'Paraguay', 'Peru', 'Poland', 'Portugal', 'Qatar', 'Romania',
-        'Russia', 'Saudi Arabia', 'Scotland', 'Senegal', 'Serbia', 'Slovakia',
-        'Slovenia', 'South Africa', 'South Korea', 'Spain', 'Sweden',
-        'Switzerland', 'Tunisia', 'Turkey', 'United States', 'Uruguay',
-        'Uzbekistan', 'Wales',
+        'Algeria','Argentina','Australia','Austria','Belgium','Bolivia',
+        'Bosnia and Herzegovina','Brazil','Cameroon','Canada','Cape Verde',
+        'Chile','Colombia','Costa Rica','Croatia','Czech Republic','Denmark',
+        'DR Congo','Ecuador','Egypt','England','France','Germany','Ghana',
+        'Greece','Haiti','Honduras','Iran','Iraq','Ireland','Italy',
+        'Ivory Coast','Jamaica','Japan','Jordan','Mexico','Morocco',
+        'Netherlands','New Zealand','Nigeria','Norway','Panama','Paraguay',
+        'Peru','Poland','Portugal','Qatar','Romania','Russia','Saudi Arabia',
+        'Scotland','Senegal','Serbia','Slovakia','Slovenia','South Africa',
+        'South Korea','Spain','Sweden','Switzerland','Tunisia','Turkey',
+        'United States','Uruguay','Uzbekistan','Wales',
     ])
 
-    col1, col2, col3 = st.columns([2, 1, 2])
-    with col1:
-        home_team = st.selectbox("Home Team", ALL_TEAMS, index=ALL_TEAMS.index('Brazil'))
-    with col2:
-        st.markdown("<div style='text-align:center;padding-top:35px;font-size:1.5rem;font-weight:900;color:#1a5c38;'>VS</div>", unsafe_allow_html=True)
-    with col3:
-        away_options = [t for t in ALL_TEAMS if t != home_team]
-        away_team = st.selectbox("Away Team", away_options, index=away_options.index('Argentina') if 'Argentina' in away_options else 0)
+    c1, c2, c3 = st.columns([5, 1, 5])
+    with c1:
+        st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Home Team</div>', unsafe_allow_html=True)
+        home_team = st.selectbox("home", ALL_TEAMS, index=ALL_TEAMS.index('Brazil'), label_visibility="collapsed")
+    with c2:
+        st.markdown('<div style="text-align:center;padding-top:28px;font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:#52527a;">vs</div>', unsafe_allow_html=True)
+    with c3:
+        st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Away Team</div>', unsafe_allow_html=True)
+        away_opts = [t for t in ALL_TEAMS if t != home_team]
+        away_team = st.selectbox("away", away_opts, index=away_opts.index('Argentina') if 'Argentina' in away_opts else 0, label_visibility="collapsed")
 
-    match_date = st.date_input("Match Date", value=date(2026, 6, 15))
-    st.markdown("")
+    st.markdown('<div style="font-size:11px;color:#52527a;letter-spacing:0.1em;text-transform:uppercase;margin:16px 0 6px 0;">Match Date</div>', unsafe_allow_html=True)
+    match_date = st.date_input("date", value=date(2026, 6, 15), label_visibility="collapsed")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("⚽ Predict Match"):
-        with st.spinner("Computing prediction..."):
+    if st.button("Run Prediction"):
+        with st.spinner("Computing..."):
             try:
-                pred = predict_match(home_team, away_team, pd.Timestamp(match_date))
+                p = predict_match(home_team, away_team, pd.Timestamp(match_date))
+                pred = p['pred']
 
                 st.markdown("---")
-                st.markdown(f"### {home_team} vs {away_team}")
-                st.markdown(f"*{match_date.strftime('%B %d, %Y')}*")
-                st.markdown("")
+                st.markdown(f'<div style="font-size:11px;color:#52527a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">{match_date.strftime("%d %b %Y")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:20px;">{home_team} — {away_team}</div>', unsafe_allow_html=True)
 
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    color = '#1a5c38' if pred['pred'] == 'home_win' else '#888'
-                    st.markdown(f"""
-                    <div class="metric-card" style="border-top-color:{color};">
-                        <div class="metric-value" style="color:{color};">{pred['home_win']}%</div>
-                        <div class="metric-label">{home_team} Win</div>
-                    </div>""", unsafe_allow_html=True)
-                with col2:
-                    color = '#f0a500' if pred['pred'] == 'draw' else '#888'
-                    st.markdown(f"""
-                    <div class="metric-card" style="border-top-color:{color};">
-                        <div class="metric-value" style="color:{color};">{pred['draw']}%</div>
-                        <div class="metric-label">Draw</div>
-                    </div>""", unsafe_allow_html=True)
-                with col3:
-                    color = '#c0392b' if pred['pred'] == 'away_win' else '#888'
-                    st.markdown(f"""
-                    <div class="metric-card" style="border-top-color:{color};">
-                        <div class="metric-value" style="color:{color};">{pred['away_win']}%</div>
-                        <div class="metric-label">{away_team} Win</div>
-                    </div>""", unsafe_allow_html=True)
+                home_cls = "active-home" if pred == 'home_win' else ""
+                draw_cls = "active-draw" if pred == 'draw' else ""
+                away_cls = "active-away" if pred == 'away_win' else ""
 
-                pred_label = pred['pred'].replace('_', ' ').title()
-                if pred['pred'] == 'home_win':
-                    pred_label = f"{home_team} Win"
-                elif pred['pred'] == 'away_win':
-                    pred_label = f"{away_team} Win"
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.markdown(f'<div class="prob-panel {home_cls}"><div class="big-prob" style="color:{"#4f9fff" if pred=="home_win" else "#fff"};">{p["home_win"]:05.2f}%</div><div class="big-label">{home_team}</div></div>', unsafe_allow_html=True)
+                with c2:
+                    st.markdown(f'<div class="prob-panel {draw_cls}"><div class="big-prob" style="color:{"#ffcc00" if pred=="draw" else "#fff"};">{p["draw"]:05.2f}%</div><div class="big-label">Draw</div></div>', unsafe_allow_html=True)
+                with c3:
+                    st.markdown(f'<div class="prob-panel {away_cls}"><div class="big-prob" style="color:{"#ff4466" if pred=="away_win" else "#fff"};">{p["away_win"]:05.2f}%</div><div class="big-label">{away_team}</div></div>', unsafe_allow_html=True)
 
-                st.markdown("")
-                st.success(f"**Prediction: {pred_label}**")
+                pred_text = home_team if pred == 'home_win' else ('Draw' if pred == 'draw' else away_team)
+                st.markdown(f'<div style="margin-top:16px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:#52527a;letter-spacing:0.08em;">PREDICTION — <span style="color:#fff;">{pred_text.upper()}</span></div>', unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"Prediction failed: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — PAST RESULTS
+# RESULTS
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "📊 Past Results":
-    st.markdown("# 📊 Past Prediction Results")
-    st.markdown("Walk-forward validation across 2014, 2018, and 2022 World Cups.")
+elif page == "Results":
+    st.markdown("# Validation Results")
+    st.markdown("## Walk-forward testing across 2014, 2018, and 2022")
     st.markdown("---")
 
     if past_df is None:
-        st.warning("predictions.csv not found. Please run the notebook and save_model.py first.")
+        st.warning("predictions.csv not found.")
         st.stop()
 
-    # Summary stats
-    col1, col2, col3, col4 = st.columns(4)
-    total = len(past_df)
+    total   = len(past_df)
     correct = past_df['correct'].sum()
-    acc = correct / total * 100
+    acc     = correct / total * 100
+    baseline = past_df['actual'].value_counts(normalize=True).max() * 100
+    beat    = acc > baseline
 
-    with col1:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{acc:.1f}%</div><div class="metric-label">Overall Accuracy</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{correct}/{total}</div><div class="metric-label">Correct Predictions</div></div>', unsafe_allow_html=True)
-    with col3:
-        baseline = past_df['actual'].value_counts(normalize=True).max() * 100
-        st.markdown(f'<div class="metric-card"><div class="metric-value">{baseline:.1f}%</div><div class="metric-label">Baseline Accuracy</div></div>', unsafe_allow_html=True)
-    with col4:
-        beat = "✅ YES" if acc > baseline else "❌ NO"
-        st.markdown(f'<div class="metric-card"><div class="metric-value" style="font-size:1.4rem;">{beat}</div><div class="metric-label">Beat Baseline</div></div>', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(f'<div class="tile tile-accent"><div class="tile-val">{acc:.1f}%</div><div class="tile-lbl">Accuracy</div></div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown(f'<div class="tile"><div class="tile-val">{baseline:.1f}%</div><div class="tile-lbl">Baseline</div></div>', unsafe_allow_html=True)
+    with c3:
+        st.markdown(f'<div class="tile"><div class="tile-val">{correct}/{total}</div><div class="tile-lbl">Correct</div></div>', unsafe_allow_html=True)
+    with c4:
+        val = "YES" if beat else "NO"
+        color = "#4f9fff" if beat else "#ff4466"
+        st.markdown(f'<div class="tile"><div class="tile-val" style="color:{color};">{val}</div><div class="tile-lbl">Beat Baseline</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
+    st.markdown('<div class="section-label">Per Tournament</div>', unsafe_allow_html=True)
 
-    # Per-year breakdown
-    st.markdown("### Accuracy by Tournament")
-    yr_cols = st.columns(3)
+    yc = st.columns(3)
     for i, yr in enumerate([2014, 2018, 2022]):
-        yr_df = past_df[past_df['year'] == yr]
-        yr_acc = yr_df['correct'].mean() * 100
-        yr_correct = yr_df['correct'].sum()
-        yr_total = len(yr_df)
-        with yr_cols[i]:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{yr_acc:.1f}%</div>
-                <div class="metric-label">{yr} World Cup<br>{yr_correct}/{yr_total} correct</div>
-            </div>""", unsafe_allow_html=True)
+        yd = past_df[past_df['year'] == yr]
+        ya = yd['correct'].mean() * 100
+        with yc[i]:
+            st.markdown(f'<div class="tile"><div class="tile-val">{ya:.1f}%</div><div class="tile-lbl">{yr} — {yd["correct"].sum()}/{len(yd)}</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
-
-    # Filter
     col1, col2 = st.columns([2, 3])
     with col1:
-        yr_filter = st.selectbox("Filter by Year", ['All'] + [str(y) for y in sorted(past_df['year'].unique())])
+        yr_f = st.selectbox("Year", ['All'] + [str(y) for y in sorted(past_df['year'].unique())])
     with col2:
-        show_filter = st.radio("Show", ['All', 'Correct only', 'Incorrect only'], horizontal=True)
+        show_f = st.radio("Show", ['All', 'Correct', 'Incorrect'], horizontal=True)
 
-    display = past_df.copy()
-    if yr_filter != 'All':
-        display = display[display['year'] == int(yr_filter)]
-    if show_filter == 'Correct only':
-        display = display[display['correct'] == True]
-    elif show_filter == 'Incorrect only':
-        display = display[display['correct'] == False]
+    disp = past_df.copy()
+    if yr_f != 'All': disp = disp[disp['year'] == int(yr_f)]
+    if show_f == 'Correct':   disp = disp[disp['correct'] == True]
+    if show_f == 'Incorrect': disp = disp[disp['correct'] == False]
+    disp = disp.sort_values('date', ascending=False)
 
-    display = display.sort_values('date', ascending=False)
+    st.markdown(f'<div style="font-size:11px;color:#52527a;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:16px;">{len(disp)} matches</div>', unsafe_allow_html=True)
 
-    # Table
-    st.markdown(f"**{len(display)} matches shown**")
-    for _, row in display.iterrows():
-        correct_icon = "✅" if row['correct'] else "❌"
-        date_str = row['date'].strftime('%b %d, %Y') if hasattr(row['date'], 'strftime') else str(row['date'])[:10]
-        hw = row.get('prob_home_win', '-')
-        dr = row.get('prob_draw', '-')
-        aw = row.get('prob_away_win', '-')
+    # Header
+    st.markdown('<div style="display:flex;padding:8px 0;border-bottom:1px solid #1c1c30;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#52527a;"><span style="flex:2;">Match</span><span style="flex:1;">Actual</span><span style="flex:1;">Predicted</span><span style="flex:1;text-align:right;">Result</span></div>', unsafe_allow_html=True)
 
-        actual_label = row['actual'].replace('_', ' ').title()
-        pred_label = row['predicted'].replace('_', ' ').title()
-
-        cols = st.columns([3, 2, 2, 2, 1])
-        with cols[0]:
-            st.markdown(f"**{row['home_team']} vs {row['away_team']}**  \n*{date_str} · {row['year']}*")
-        with cols[1]:
-            st.markdown(f"Actual: **{actual_label}**")
-        with cols[2]:
-            st.markdown(f"Predicted: **{pred_label}**")
-        with cols[3]:
-            if hw != '-':
-                st.markdown(f"HW:{hw}% D:{dr}% AW:{aw}%")
-        with cols[4]:
-            st.markdown(f"**{correct_icon}**")
-        st.markdown("---")
+    for _, row in disp.iterrows():
+        d = row['date'].strftime('%d %b %Y') if hasattr(row['date'], 'strftime') else str(row['date'])[:10]
+        ok = row['correct']
+        result_html = f'<span class="result-{"correct" if ok else "wrong"}">{"CORRECT" if ok else "INCORRECT"}</span>'
+        actual = row['actual'].replace('_', ' ').title()
+        pred   = row['predicted'].replace('_', ' ').title()
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1c1c30;font-size:13px;">
+            <span style="flex:2;"><span style="color:#fff;font-weight:500;">{row['home_team']} — {row['away_team']}</span><br><span style="font-size:11px;color:#52527a;">{d} · {row['year']}</span></span>
+            <span style="flex:1;color:#d0d0e8;">{actual}</span>
+            <span style="flex:1;color:#d0d0e8;">{pred}</span>
+            <span style="flex:1;text-align:right;">{result_html}</span>
+        </div>""", unsafe_allow_html=True)
